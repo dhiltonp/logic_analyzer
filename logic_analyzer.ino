@@ -192,8 +192,8 @@ const uint8_t channel_remap[8] = {3,1,6,6,0,0,0,0};
 #define DEBUG_OFF PORTD = B00000000
 #endif /* USE_PORTD */
 
-//#define DEBUG_MENU
-//#define DEBUG
+#define DEBUG_MENU
+#define DEBUG
 
 #ifdef DEBUG
 #define MAX_CAPTURE_SIZE DEBUG_CAPTURE_SIZE
@@ -371,6 +371,11 @@ void loop()
       trigger = cmdBytes[0];
 #ifdef REMAP_CHANNELS
       remap_channels(channel_remap, &trigger, 1, UNMAP);
+#endif
+#ifndef CHAN7
+      if(trigger) {
+        trigger |= 0xC0; // mask the top 2 bits, too
+      }
 #endif
       break;
     case SUMP_TRIGGER_VALUES:
@@ -893,10 +898,9 @@ void triggerMicro() {
      * busy loop reading CHANPIN until we trigger.
      * we always start capturing at the start of the buffer
      * and use it as a circular buffer
-     *
      */
     DEBUG_ON; /* debug timing measurement */
-    while ((trigger_values ^ (logicdata[logicIndex] = CHANPIN)) & trigger) {
+    while ((trigger | (logicdata[logicIndex] = CHANPIN)) != trigger | trigger_values) {
       /* DEBUG_OFF; */
       /* increment index. */
       logicIndex++;
@@ -1053,11 +1057,13 @@ void get_metadata() {
 void debugprint() {
   int i;
 
-#if 0
+#if 1
   Serial.print("divider = ");
   Serial.println(divider, DEC);
   Serial.print("delayTime = ");
   Serial.println(delayTime, DEC);
+  Serial.print("trigger = ");
+  Serial.println(trigger, BIN);
   Serial.print("trigger_values = ");
   Serial.println(trigger_values, BIN);
 #endif
